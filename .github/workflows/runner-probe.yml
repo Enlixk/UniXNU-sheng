@@ -1,0 +1,19 @@
+name: macOS runner probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-26, macos-15]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 5
+    steps:
+      - name: Identify assigned runner
+        run: |
+          sw_vers
+          uname -m
+          df -h /
