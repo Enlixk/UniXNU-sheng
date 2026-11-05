@@ -164,11 +164,19 @@ jobs:
             UniXNU/out/sheng/*/*/package.manifest.json
 
       - name: build matching userdata image
+        if: inputs.os == '27'
         working-directory: UniXNU
         run: |
           ./unixnu build userdata --dry-run
           ./unixnu build userdata
+          root=out/sheng/ipados-27.0.1-24A446/sheng_ipados27/userdata/userdata-root
+          python3 ../device/scripts/restore-root-tables.py "$root.img" "$root.json" \
+            ../device/scripts/policies/ipados-27.0.1-24A446 "$PWD/out/root-tables"
+          ./unixnu build userdata \
+            --object "OS.vroot=$PWD/out/root-tables/OS.vroot" \
+            --object "SystemOS.vroot=$PWD/out/root-tables/SystemOS.vroot"
       - name: userdata image
+        if: inputs.os == '27'
         uses: actions/upload-artifact@v4
         with:
           name: userdata-root-${{ inputs.os }}
