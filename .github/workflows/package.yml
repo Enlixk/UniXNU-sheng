@@ -138,6 +138,17 @@ jobs:
           if not path.is_file() and os.environ['INIT_DATA'] != 'true':
               raise SystemExit('No saved seed. Supply the ORIGINAL seed for an existing installation, or select init_data for a FIRST installation')
           PY
+      - name: Normalize Mesa new-file patch metadata
+        run: python3 device/scripts/fix-mesa-patch-headers.py UniXNU
+      - uses: actions/cache/restore@v4
+        id: os-cache
+        if: inputs.os == '27'
+        with:
+          key: ipsw-24A446-os-decrypted-v1
+          path: |
+            UniXNU/out/ipsw/24A446/043-68950-668.dmg
+            UniXNU/out/ipsw/24A446/043-68950-668.dmg.json
+            UniXNU/out/ipsw/24A446/043-68950-668.dmg.aea.json
       - name: package
         working-directory: device
         env:
@@ -151,6 +162,15 @@ jobs:
             args+=(--init-data)
           fi
           scripts/package.sh "${args[@]}"
+      - name: Save verified decrypted OS cache
+        if: always() && inputs.os == '27' && steps.os-cache.outputs.cache-hit != 'true' && hashFiles('UniXNU/out/ipsw/24A446/043-68950-668.dmg.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          key: ipsw-24A446-os-decrypted-v1
+          path: |
+            UniXNU/out/ipsw/24A446/043-68950-668.dmg
+            UniXNU/out/ipsw/24A446/043-68950-668.dmg.json
+            UniXNU/out/ipsw/24A446/043-68950-668.dmg.aea.json
       - uses: actions/cache/save@v4
         if: always() && inputs.os == '27' && steps.data-cache.outputs.cache-hit != 'true' && hashFiles('UniXNU/out/sheng/ipados-27.0.1-24A446/sheng_ipados27/runtime/data.dbr') != ''
         with:
