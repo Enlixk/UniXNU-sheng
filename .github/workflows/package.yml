@@ -58,7 +58,15 @@ jobs:
           submodules: recursive
       - name: tools
         run: |
-          brew install dtc llvm lld cmake mtools ninja glslang shaderc spirv-tools bison pkgconf rustup blacktop/tap/ipsw
+          brew install dtc llvm lld cmake mtools ninja glslang shaderc spirv-tools bison pkgconf rustup
+          mkdir -p "$RUNNER_TEMP/unixnu-tools"
+          curl -fL --retry 3 https://github.com/blacktop/ipsw/releases/download/v3.1.742/ipsw_3.1.742_macOS_x86_64.tar.gz -o "$RUNNER_TEMP/ipsw.tar.gz"
+          echo "a04adb1e2d619a461042251d04ea2fccb009206d248f64c7da5d56964d8704d0  $RUNNER_TEMP/ipsw.tar.gz" | shasum -a 256 -c -
+          tar -xzf "$RUNNER_TEMP/ipsw.tar.gz" -C "$RUNNER_TEMP/unixnu-tools" ipsw
+          chmod +x "$RUNNER_TEMP/unixnu-tools/ipsw"
+          echo "$RUNNER_TEMP/unixnu-tools" >> "$GITHUB_PATH"
+          export PATH="$RUNNER_TEMP/unixnu-tools:$PATH"
+          ipsw --version
           brew_prefix="$(brew --prefix)"
           export PATH="$HOME/.cargo/bin:$brew_prefix/opt/llvm/bin:$brew_prefix/opt/lld/bin:$brew_prefix/opt/bison/bin:$PATH"
           {
