@@ -36,6 +36,37 @@ jobs:
     runs-on: macos-26-intel
     timeout-minutes: 360
     steps:
+      - name: tools
+        run: |
+          brew install dtc llvm lld cmake mtools ninja glslang shaderc spirv-tools bison pkgconf rustup
+          mkdir -p "$RUNNER_TEMP/unixnu-tools"
+          curl -fL --retry 3 https://github.com/blacktop/ipsw/releases/download/v3.1.742/ipsw_3.1.742_macOS_x86_64.tar.gz -o "$RUNNER_TEMP/ipsw.tar.gz"
+          echo "a04adb1e2d619a461042251d04ea2fccb009206d248f64c7da5d56964d8704d0  $RUNNER_TEMP/ipsw.tar.gz" | shasum -a 256 -c -
+          tar -xzf "$RUNNER_TEMP/ipsw.tar.gz" -C "$RUNNER_TEMP/unixnu-tools" ipsw
+          chmod +x "$RUNNER_TEMP/unixnu-tools/ipsw"
+          echo "$RUNNER_TEMP/unixnu-tools" >> "$GITHUB_PATH"
+          export PATH="$RUNNER_TEMP/unixnu-tools:$PATH"
+          ipsw version
+          brew_prefix="$(brew --prefix)"
+          export PATH="$HOME/.cargo/bin:$brew_prefix/opt/rustup/bin:$brew_prefix/opt/llvm/bin:$brew_prefix/opt/lld/bin:$brew_prefix/opt/bison/bin:$PATH"
+          {
+            echo "$HOME/.cargo/bin"
+            echo "$brew_prefix/opt/rustup/bin"
+            echo "$brew_prefix/opt/llvm/bin"
+            echo "$brew_prefix/opt/lld/bin"
+            echo "$brew_prefix/opt/bison/bin"
+          } >> "$GITHUB_PATH"
+          rustup toolchain install 1.98.0 --profile minimal --component rust-src
+          # Fail fast, naming the tool, before forty minutes of build.
+          ok=1
+          for t in clang xcodebuild make git ninja cmake dtc fdtget fdtput aea compression_tool \
+                   mformat mcopy ipsw rustup cargo rustc; do
+            command -v "$t" >/dev/null || { echo "missing tool: $t"; ok=0; }
+          done
+          for t in lld-link llvm-lib llvm-rc llvm-nm llvm-objcopy; do
+            [ -f "$brew_prefix/opt/llvm/bin/$t" ] || [ -f "$brew_prefix/opt/lld/bin/$t" ] || { echo "missing tool: $t"; ok=0; }
+          done
+          [ "$ok" = 1 ]
       - uses: actions/checkout@v4
         with:
           path: device
@@ -56,36 +87,6 @@ jobs:
           repository: UniXNU/uefi-sheng
           path: uefi-sheng
           submodules: recursive
-      - name: tools
-        run: |
-          brew install dtc llvm lld cmake mtools ninja glslang shaderc spirv-tools bison pkgconf rustup
-          mkdir -p "$RUNNER_TEMP/unixnu-tools"
-          curl -fL --retry 3 https://github.com/blacktop/ipsw/releases/download/v3.1.742/ipsw_3.1.742_macOS_x86_64.tar.gz -o "$RUNNER_TEMP/ipsw.tar.gz"
-          echo "a04adb1e2d619a461042251d04ea2fccb009206d248f64c7da5d56964d8704d0  $RUNNER_TEMP/ipsw.tar.gz" | shasum -a 256 -c -
-          tar -xzf "$RUNNER_TEMP/ipsw.tar.gz" -C "$RUNNER_TEMP/unixnu-tools" ipsw
-          chmod +x "$RUNNER_TEMP/unixnu-tools/ipsw"
-          echo "$RUNNER_TEMP/unixnu-tools" >> "$GITHUB_PATH"
-          export PATH="$RUNNER_TEMP/unixnu-tools:$PATH"
-          ipsw --version
-          brew_prefix="$(brew --prefix)"
-          export PATH="$HOME/.cargo/bin:$brew_prefix/opt/llvm/bin:$brew_prefix/opt/lld/bin:$brew_prefix/opt/bison/bin:$PATH"
-          {
-            echo "$HOME/.cargo/bin"
-            echo "$brew_prefix/opt/llvm/bin"
-            echo "$brew_prefix/opt/lld/bin"
-            echo "$brew_prefix/opt/bison/bin"
-          } >> "$GITHUB_PATH"
-          rustup toolchain install 1.98.0 --profile minimal --component rust-src
-          # Fail fast, naming the tool, before forty minutes of build.
-          ok=1
-          for t in clang xcodebuild make git ninja cmake dtc fdtget fdtput aea compression_tool \
-                   mformat mcopy ipsw; do
-            command -v "$t" >/dev/null || { echo "missing tool: $t"; ok=0; }
-          done
-          for t in lld-link llvm-lib llvm-rc llvm-nm llvm-objcopy; do
-            [ -f "$brew_prefix/opt/llvm/bin/$t" ] || [ -f "$brew_prefix/opt/lld/bin/$t" ] || { echo "missing tool: $t"; ok=0; }
-          done
-          [ "$ok" = 1 ]
       - name: platform seed
         env:
           seed: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
