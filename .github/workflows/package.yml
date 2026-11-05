@@ -33,7 +33,7 @@ concurrency:
 
 jobs:
   package:
-    runs-on: macos-26
+    runs-on: macos-26-intel
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
@@ -54,11 +54,13 @@ jobs:
       - name: tools
         run: |
           brew install dtc llvm lld cmake mtools ninja glslang shaderc spirv-tools bison pkgconf rustup blacktop/tap/ipsw
+          brew_prefix="$(brew --prefix)"
+          export PATH="$HOME/.cargo/bin:$brew_prefix/opt/llvm/bin:$brew_prefix/opt/lld/bin:$brew_prefix/opt/bison/bin:$PATH"
           {
             echo "$HOME/.cargo/bin"
-            echo "/opt/homebrew/opt/llvm/bin"
-            echo "/opt/homebrew/opt/lld/bin"
-            echo "/opt/homebrew/opt/bison/bin"
+            echo "$brew_prefix/opt/llvm/bin"
+            echo "$brew_prefix/opt/lld/bin"
+            echo "$brew_prefix/opt/bison/bin"
           } >> "$GITHUB_PATH"
           rustup toolchain install 1.98.0 --profile minimal --component rust-src
           # Fail fast, naming the tool, before forty minutes of build.
@@ -68,7 +70,7 @@ jobs:
             command -v "$t" >/dev/null || { echo "missing tool: $t"; ok=0; }
           done
           for t in lld-link llvm-lib llvm-rc llvm-nm llvm-objcopy; do
-            [ -f "/opt/homebrew/opt/llvm/bin/$t" ] || [ -f "/opt/homebrew/opt/lld/bin/$t" ] || { echo "missing tool: $t"; ok=0; }
+            [ -f "$brew_prefix/opt/llvm/bin/$t" ] || [ -f "$brew_prefix/opt/lld/bin/$t" ] || { echo "missing tool: $t"; ok=0; }
           done
           [ "$ok" = 1 ]
       - name: platform seed
