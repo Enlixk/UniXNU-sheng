@@ -45,7 +45,12 @@ jobs:
           repository: UniXNU/UniXNU
           ref: e2fdae4312d0acc3d8a52bc457101e7918095e6a # Upstream main, reviewed 2026-11-06
           path: UniXNU
-          submodules: recursive
+          submodules: false
+      - name: Align ArmCpu with upstream component catalog
+        working-directory: UniXNU
+        run: |
+          git update-index --cacheinfo 160000 93a5030c5d983d0ef90f0fca93879d6e36ad1ba8 drivers/ArmCpu
+          git submodule update --init --depth 1 --recursive
       - uses: actions/checkout@v4
         with:
           repository: UniXNU/uefi-sheng
